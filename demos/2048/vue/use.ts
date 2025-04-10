@@ -1,10 +1,10 @@
-import { computed, reactive, toRefs, watchEffect, type MaybeRef } from 'vue';
+import { reactive, toRefs, watchEffect, type MaybeRef } from 'vue';
 import { useStorage, useThrottleFn } from '@vueuse/core';
 import {
   useMoveCommandCallback,
   usePagehideCallback,
 } from '@/shared/composable';
-import { G2048Model, type MoveDirection } from '../model';
+import { G2048Model } from '../model';
 
 export interface UseG2048Options {
   saveWhenExit?: boolean;
@@ -34,11 +34,7 @@ export function useG2048(
     }
   });
 
-  const onMoved = useThrottleFn(
-    (cmd: MoveDirection) => model.move(cmd),
-    moveThrottle,
-    true,
-  );
+  const onMoved = useThrottleFn(model.move.bind(model), moveThrottle, true);
   useMoveCommandCallback({ element: boardRef, onMoved });
 
   if (saveWhenExit) {
@@ -65,9 +61,9 @@ export function useG2048(
     tiles,
     options,
     bestScore,
-    canBack: computed(() => !!model.prevState),
     init: model.init.bind(model),
     move: model.move.bind(model),
     back: model.back.bind(model),
+    canBack: model.canBack.bind(model),
   };
 }

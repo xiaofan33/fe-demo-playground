@@ -66,7 +66,7 @@ function updateScoreLabelWithAnimation(to: number, from?: number) {
     <div class="inline-flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <h1
-          class="tile-2048 w-32 self-stretch rounded-md p-2 text-4xl font-bold shadow-none!"
+          class="tile-2048 w-32 rounded-md p-2.5 text-4xl font-bold shadow-none!"
         >
           2048
         </h1>
@@ -140,7 +140,7 @@ function updateScoreLabelWithAnimation(to: number, from?: number) {
           >
             <div class="mb-6 text-5xl font-bold">Game Over</div>
             <button
-              class="rounded-md bg-[#8f7a6d] px-6 py-2 text-lg font-bold text-white dark:bg-[#776359]"
+              class="rounded-md bg-[#8f7a6d] px-7 py-2.5 text-lg font-bold text-white dark:bg-[#776359]"
               @click="newGame"
             >
               再来
@@ -156,9 +156,7 @@ function updateScoreLabelWithAnimation(to: number, from?: number) {
         <button
           :class="[
             'flex h-10 w-16 items-center justify-center rounded-md transition outline-none hover:bg-black/5 dark:bg-white/10',
-            model.canBack.value
-              ? 'opacity-90'
-              : 'cursor-not-allowed opacity-30',
+            model.canBack() ? 'opacity-90' : 'cursor-not-allowed opacity-30',
           ]"
           title="撤销上次移动"
           @click="model.back"

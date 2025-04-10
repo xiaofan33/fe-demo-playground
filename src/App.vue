@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import G2048 from '@/2048';
+import G2048 from '@/2048/vue';
 </script>
 
 <template>

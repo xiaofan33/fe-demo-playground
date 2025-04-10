@@ -120,9 +120,11 @@ export class G2048Model {
         this.tiles.push(tile);
         this.cells[y][x] = tile;
       });
-    if (maximum === n) {
-      this.gg = this.canMove();
-    }
+    this.gg = maximum === n && !this.canMove();
+  }
+
+  canBack() {
+    return !!this.prevState;
   }
 
   canMove() {
