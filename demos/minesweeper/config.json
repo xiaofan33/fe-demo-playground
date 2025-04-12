@@ -2,7 +2,8 @@
   "difficultyOptions": [
     { "key": "easy", "text": "初级", "w": 9, "h": 9, "m": 10 },
     { "key": "medium", "text": "中级", "w": 16, "h": 16, "m": 40 },
-    { "key": "hard", "text": "高级", "w": 30, "h": 16, "m": 99 }
+    { "key": "hard", "text": "高级", "w": 30, "h": 16, "m": 99 },
+    { "key": "custom", "text": "自定义", "w": 9, "h": 9, "m": 10 }
   ],
   "emojiPresets": {
     "ready": "🙂",

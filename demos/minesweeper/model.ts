@@ -26,6 +26,8 @@ export interface StorageData {
   duration?: number;
 }
 
+export type OperationType = 'open' | 'mark' | 'openAdjacent';
+
 export type BoardState = 'ready' | 'playing' | 'won' | 'lost';
 
 export class MinesweeperModel {
@@ -33,7 +35,7 @@ export class MinesweeperModel {
   timer: { duration: number; start?: number } = { duration: 0 };
   board: BoardProps = { w: 0, h: 0, m: 0 };
   grids: GridProps[] = [];
-  minesIndexSet: Set<number> = new Set();
+  minesIndexArr: number[] = [];
   marksIndexSet: Set<number> = new Set();
   siblingsCache: Map<number, number[]> = new Map();
   waitOpenedGridsCount = 0;
@@ -47,15 +49,11 @@ export class MinesweeperModel {
   init(board: BoardProps = { w: 9, h: 9, m: 10 }) {
     const { w, h, m } = board;
     if (w !== this.board.w || h !== this.board.h) {
-      this.grids = Array.from({ length: w * h }, (_, i) => ({ index: i }));
       this.siblingsCache.clear();
-    } else {
-      this.grids.forEach(
-        grid => (grid.mine = grid.open = grid.mark = grid.boom = false),
-      );
     }
     this.board = { w, h, m };
-    this.minesIndexSet.clear();
+    this.grids = Array.from({ length: w * h }, (_, index) => ({ index }));
+    this.minesIndexArr.length = 0;
     this.marksIndexSet.clear();
     this.waitOpenedGridsCount = w * h - m;
     this.timer = { duration: 0 };
@@ -68,7 +66,7 @@ export class MinesweeperModel {
     grids.forEach(([index, bitmask]) => {
       const [open, mine, mark] = [1, 2, 4].map(bit => !!(bit & bitmask));
       if (open) openGrids.push(index);
-      if (mine) this.minesIndexSet.add(index);
+      if (mine) this.minesIndexArr.push(index);
       if (mark) this.marksIndexSet.add(index);
       this.grids[index] = { index, open, mine, mark };
     });
@@ -114,7 +112,11 @@ export class MinesweeperModel {
     return { x: index % this.board.w, y: Math.floor(index / this.board.w) };
   }
 
-  operate(grid: GridProps, action: 'open' | 'mark', allowOpenAdjacent = false) {
+  operate(grid: GridProps, action: OperationType, allowOpenAdjacent?: boolean) {
+    if (action === 'openAdjacent') {
+      this.handleOpenAdjacent(grid);
+      return;
+    }
     if (!this.checkAndInitializeMines(grid.index)) {
       return;
     }
@@ -122,48 +124,27 @@ export class MinesweeperModel {
       action === 'mark' || grid.mark
         ? this.handleMark(grid)
         : this.handleOpen(grid);
-    if (!isHandled && allowOpenAdjacent && grid.open) {
-      this.openAdjacent(grid);
+    if (!isHandled && grid.open && allowOpenAdjacent) {
+      this.handleOpenAdjacent(grid);
     }
   }
 
-  openAdjacent(grid: GridProps) {
-    if (!grid.open || this.state !== 'playing') {
-      return;
-    }
-    const siblings = this.getSiblings(grid.index);
-    let markedCount = 0;
-    let unopenedGrids: number[] = [];
-    siblings.forEach(index => {
-      if (this.grids[index].mark) {
-        markedCount++;
-      } else if (!this.grids[index].open) {
-        unopenedGrids.push(index);
-      }
-    });
-    if (markedCount === this.getAdjacentMinesCount(grid.index, siblings)) {
-      unopenedGrids.forEach(index => this.doOpen(index));
-    }
-  }
-
-  private placeMines(excludedIndex?: number) {
+  private placeMines(excludedIndex: number) {
     const { w, h, m } = this.board;
     let length = w * h;
     let candidates = [...Array(length).keys()];
-    if (excludedIndex !== undefined) {
-      [excludedIndex, ...this.getSiblings(excludedIndex)].forEach(index => {
-        if (length >= m) {
-          candidates[index] = -1;
-          length--;
-        }
-      });
-      candidates = candidates.filter(index => index !== -1);
-    }
+    [excludedIndex, ...this.getSiblings(excludedIndex)].forEach(index => {
+      if (length >= m) {
+        candidates[index] = -1;
+        length--;
+      }
+    });
+    candidates = candidates.filter(index => index !== -1);
     arrayShuffle(candidates)
       .slice(0, m)
       .forEach(index => {
         this.grids[index].mine = true;
-        this.minesIndexSet.add(index);
+        this.minesIndexArr.push(index);
       });
   }
 
@@ -177,6 +158,27 @@ export class MinesweeperModel {
       this.state = 'playing';
     }
     return true;
+  }
+
+  private handleOpenAdjacent(grid: GridProps) {
+    if (!grid.open || this.state !== 'playing') {
+      return false;
+    }
+    const siblings = this.getSiblings(grid.index);
+    let markedCount = 0;
+    let unopenedGrids: number[] = [];
+    siblings.forEach(index => {
+      if (this.grids[index].mark) {
+        markedCount++;
+      } else if (!this.grids[index].open) {
+        unopenedGrids.push(index);
+      }
+    });
+    if (markedCount === this.getAdjacentMinesCount(grid.index, siblings)) {
+      unopenedGrids.forEach(index => this.doOpen(index));
+      return true;
+    }
+    return false;
   }
 
   private handleMark(grid: GridProps) {
@@ -203,29 +205,36 @@ export class MinesweeperModel {
     if (grid.open) {
       return;
     }
-    grid.open = true;
-    this.waitOpenedGridsCount--;
     if (grid.mine) {
       grid.boom = true;
       this.doGameOver(false);
-    } else if (this.waitOpenedGridsCount === 0) {
+      return;
+    }
+    if (this.waitOpenedGridsCount === 1) {
       this.doGameOver(true);
-    } else if (this.getAdjacentMinesCount(index) === 0) {
-      this.getSiblings(index).forEach(siblingIndex =>
-        this.doOpen(siblingIndex),
-      );
+      return;
+    }
+    this.waitOpenedGridsCount--;
+    grid.open = true;
+    if (this.getAdjacentMinesCount(index) === 0) {
+      this.getSiblings(index).forEach(siblingIndex => {
+        const sibling = this.grids[siblingIndex];
+        if (!sibling.open && !sibling.mine) {
+          this.doOpen(siblingIndex);
+        }
+      });
     }
   }
 
   private doGameOver(isWin = false) {
     if (!isWin) {
       this.state = 'lost';
-      this.minesIndexSet.forEach(index => (this.grids[index].open = true));
+      this.minesIndexArr.forEach(index => (this.grids[index].open = true));
       this.marksIndexSet.forEach(index => (this.grids[index].open = true));
     } else {
       this.state = 'won';
-      this.minesIndexSet.forEach(index => (this.grids[index].mark = true));
-      this.marksIndexSet = new Set(this.minesIndexSet);
+      this.minesIndexArr.forEach(index => (this.grids[index].mark = true));
+      this.marksIndexSet = new Set(this.minesIndexArr);
     }
   }
 
@@ -233,14 +242,14 @@ export class MinesweeperModel {
     const grid = this.grids[index];
     if (grid.adjacentMines === undefined) {
       grid.adjacentMines = (siblings || this.getSiblings(index)).reduce(
-        (acc, index) => (this.minesIndexSet.has(index) ? acc + 1 : acc),
+        (acc, index) => (this.grids[index].mine ? acc + 1 : acc),
         0,
       );
     }
     return grid.adjacentMines;
   }
 
-  private getSiblings(index: number) {
+  getSiblings(index: number) {
     if (this.siblingsCache.has(index)) {
       return this.siblingsCache.get(index)!;
     }
