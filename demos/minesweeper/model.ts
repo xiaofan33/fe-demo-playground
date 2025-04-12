@@ -11,34 +11,34 @@ export interface BoardProps {
   m: number /**mines count */;
 }
 
-export interface GridProps {
+export interface CellProps {
   readonly index: number;
   mine?: boolean;
   open?: boolean;
   mark?: boolean;
   boom?: boolean;
-  adjacentMines?: number;
+  aroundMines?: number;
 }
 
 export interface StorageData {
   board: BoardProps;
-  grids: Array<[number, number]>;
+  cells: Array<[number, number]>;
   duration?: number;
 }
 
-export type OperationType = 'open' | 'mark' | 'openAdjacent';
-
 export type BoardState = 'ready' | 'playing' | 'won' | 'lost';
+
+export type OperationType = 'open' | 'mark' | 'openAround';
 
 export class MinesweeperModel {
   state: BoardState = 'ready';
   timer: { duration: number; start?: number } = { duration: 0 };
   board: BoardProps = { w: 0, h: 0, m: 0 };
-  grids: GridProps[] = [];
+  cells: CellProps[] = [];
   minesIndexArr: number[] = [];
   marksIndexSet: Set<number> = new Set();
   siblingsCache: Map<number, number[]> = new Map();
-  waitOpenedGridsCount = 0;
+  restOpenedCellsCount = 0;
   // prettier-ignore
   static readonly siblingsVec = [
     [-1, -1],[0, -1],[1, -1],
@@ -52,28 +52,29 @@ export class MinesweeperModel {
       this.siblingsCache.clear();
     }
     this.board = { w, h, m };
-    this.grids = Array.from({ length: w * h }, (_, index) => ({ index }));
+    this.cells = Array.from({ length: w * h }, (_, index) => ({ index }));
     this.minesIndexArr.length = 0;
     this.marksIndexSet.clear();
-    this.waitOpenedGridsCount = w * h - m;
+    this.restOpenedCellsCount = w * h - m;
     this.timer = { duration: 0 };
     this.state = 'ready';
   }
 
-  load({ board, grids, duration = 0 }: StorageData) {
+  load({ board, cells, duration = 0 }: StorageData) {
     this.init(board);
-    const openGrids: number[] = [];
-    grids.forEach(([index, bitmask]) => {
+    const openedCells: number[] = [];
+    cells.forEach(([index, bitmask]) => {
       const [open, mine, mark] = [1, 2, 4].map(bit => !!(bit & bitmask));
-      if (open) openGrids.push(index);
+      if (open) openedCells.push(index);
       if (mine) this.minesIndexArr.push(index);
       if (mark) this.marksIndexSet.add(index);
-      this.grids[index] = { index, open, mine, mark };
+      this.cells[index] = { index, open, mine, mark };
     });
-    openGrids.forEach(
-      index =>
-        (this.grids[index].adjacentMines = this.getAdjacentMinesCount(index)),
-    );
+    this.restOpenedCellsCount =
+      this.board.w * this.board.h - this.board.m - openedCells.length;
+    openedCells.forEach(index => {
+      this.cells[index].aroundMines = this.getAroundMinesCount(index);
+    });
     this.timer = { duration, start: Date.now() };
     this.state = 'playing';
   }
@@ -82,7 +83,7 @@ export class MinesweeperModel {
     const duration = this.timer.start
       ? Date.now() - this.timer.start + this.timer.duration
       : this.timer.duration;
-    const grids = this.grids
+    const cells = this.cells
       .map(({ index, open, mine, mark }) => {
         let bitmask = 0;
         if (open) bitmask |= 1;
@@ -92,40 +93,45 @@ export class MinesweeperModel {
       })
       .filter(item => item !== null);
 
-    return JSON.stringify({ duration, grids, board: this.board });
+    return { duration, cells, board: { ...this.board } };
   }
 
   restart() {
     if (this.state !== 'ready') {
-      this.grids.forEach(grid => (grid.open = grid.mark = grid.boom = false));
+      this.cells.forEach(cell => {
+        cell.open = false;
+        cell.mark = false;
+        cell.boom = false;
+      });
       this.marksIndexSet.clear();
+      this.restOpenedCellsCount = this.board.w * this.board.h - this.board.m;
       this.timer = { duration: 0, start: Date.now() };
       this.state = 'playing';
     }
   }
 
-  posToIndex(pos: Position) {
-    return pos.y * this.board.w + pos.x;
+  posToIndex({ x, y }: Position) {
+    return y * this.board.w + x;
   }
 
   indexToPos(index: number) {
     return { x: index % this.board.w, y: Math.floor(index / this.board.w) };
   }
 
-  operate(grid: GridProps, action: OperationType, allowOpenAdjacent?: boolean) {
-    if (action === 'openAdjacent') {
-      this.handleOpenAdjacent(grid);
+  operate(cell: CellProps, action: OperationType, allowOpenAround?: boolean) {
+    if (action === 'openAround') {
+      this.handleOpenAround(cell);
       return;
     }
-    if (!this.checkAndInitializeMines(grid.index)) {
+    if (!this.checkAndInitializeMines(cell.index)) {
       return;
     }
     const isHandled =
-      action === 'mark' || grid.mark
-        ? this.handleMark(grid)
-        : this.handleOpen(grid);
-    if (!isHandled && grid.open && allowOpenAdjacent) {
-      this.handleOpenAdjacent(grid);
+      action === 'mark' || cell.mark
+        ? this.handleMark(cell)
+        : this.handleOpen(cell);
+    if (!isHandled && allowOpenAround) {
+      this.handleOpenAround(cell);
     }
   }
 
@@ -143,7 +149,7 @@ export class MinesweeperModel {
     arrayShuffle(candidates)
       .slice(0, m)
       .forEach(index => {
-        this.grids[index].mine = true;
+        this.cells[index].mine = true;
         this.minesIndexArr.push(index);
       });
   }
@@ -160,98 +166,98 @@ export class MinesweeperModel {
     return true;
   }
 
-  private handleOpenAdjacent(grid: GridProps) {
-    if (!grid.open || this.state !== 'playing') {
+  private handleOpenAround(cell: CellProps) {
+    if (!cell.open || this.state !== 'playing') {
       return false;
     }
-    const siblings = this.getSiblings(grid.index);
+    const siblings = this.getSiblings(cell.index);
     let markedCount = 0;
-    let unopenedGrids: number[] = [];
+    let unopenedCells: number[] = [];
     siblings.forEach(index => {
-      if (this.grids[index].mark) {
+      if (this.cells[index].mark) {
         markedCount++;
-      } else if (!this.grids[index].open) {
-        unopenedGrids.push(index);
+      } else if (!this.cells[index].open) {
+        unopenedCells.push(index);
       }
     });
-    if (markedCount === this.getAdjacentMinesCount(grid.index, siblings)) {
-      unopenedGrids.forEach(index => this.doOpen(index));
+    if (markedCount === this.getAroundMinesCount(cell.index, siblings)) {
+      unopenedCells.forEach(index => this.doOpen(index));
       return true;
     }
     return false;
   }
 
-  private handleMark(grid: GridProps) {
-    if (grid.open) {
+  private handleMark(cell: CellProps) {
+    if (cell.open) {
       return false;
     }
-    grid.mark = !grid.mark;
-    grid.mark
-      ? this.marksIndexSet.add(grid.index)
-      : this.marksIndexSet.delete(grid.index);
+    cell.mark = !cell.mark;
+    cell.mark
+      ? this.marksIndexSet.add(cell.index)
+      : this.marksIndexSet.delete(cell.index);
     return true;
   }
 
-  private handleOpen(grid: GridProps) {
-    if (grid.open) {
+  private handleOpen(cell: CellProps) {
+    if (cell.open) {
       return false;
     }
-    this.doOpen(grid.index);
+    this.doOpen(cell.index);
     return true;
   }
 
   private doOpen(index: number) {
-    const grid = this.grids[index];
-    if (grid.open) {
-      return;
-    }
-    if (grid.mine) {
-      grid.boom = true;
+    const cell = this.cells[index];
+    cell.open = true;
+    this.restOpenedCellsCount--;
+    if (cell.mine) {
+      cell.boom = true;
       this.doGameOver(false);
       return;
     }
-    if (this.waitOpenedGridsCount === 1) {
+    if (this.restOpenedCellsCount === 0) {
       this.doGameOver(true);
       return;
     }
-    this.waitOpenedGridsCount--;
-    grid.open = true;
-    if (this.getAdjacentMinesCount(index) === 0) {
+    if (this.getAroundMinesCount(index) === 0) {
       this.getSiblings(index).forEach(siblingIndex => {
-        const sibling = this.grids[siblingIndex];
-        if (!sibling.open && !sibling.mine) {
+        const sibling = this.cells[siblingIndex];
+        if (!sibling.open && !sibling.mark) {
           this.doOpen(siblingIndex);
         }
       });
     }
   }
 
-  private doGameOver(isWin = false) {
+  private doGameOver(isWin: boolean) {
     if (!isWin) {
       this.state = 'lost';
-      this.minesIndexArr.forEach(index => (this.grids[index].open = true));
-      this.marksIndexSet.forEach(index => (this.grids[index].open = true));
+      this.minesIndexArr.forEach(index => (this.cells[index].open = true));
+      this.marksIndexSet.forEach(index => (this.cells[index].open = true));
     } else {
       this.state = 'won';
-      this.minesIndexArr.forEach(index => (this.grids[index].mark = true));
       this.marksIndexSet = new Set(this.minesIndexArr);
+      this.cells.forEach(cell =>
+        cell.mine ? (cell.mark = true) : (cell.open = true),
+      );
     }
   }
 
-  private getAdjacentMinesCount(index: number, siblings?: number[]) {
-    const grid = this.grids[index];
-    if (grid.adjacentMines === undefined) {
-      grid.adjacentMines = (siblings || this.getSiblings(index)).reduce(
-        (acc, index) => (this.grids[index].mine ? acc + 1 : acc),
+  private getAroundMinesCount(index: number, siblings?: number[]) {
+    const cell = this.cells[index];
+    if (cell.aroundMines === undefined) {
+      cell.aroundMines = (siblings || this.getSiblings(index)).reduce(
+        (acc, index) => (this.cells[index].mine ? acc + 1 : acc),
         0,
       );
     }
-    return grid.adjacentMines;
+    return cell.aroundMines;
   }
 
   getSiblings(index: number) {
-    if (this.siblingsCache.has(index)) {
-      return this.siblingsCache.get(index)!;
+    const cached = this.siblingsCache.get(index);
+    if (cached) {
+      return cached;
     }
     const { w, h } = this.board;
     const { x, y } = this.indexToPos(index);

@@ -1,4 +1,12 @@
 import confetti, { type Options } from 'canvas-confetti';
+import type { BoardProps } from './model';
+
+export type SettingOptions = BoardProps & {
+  side: number;
+  edge: number;
+  openFirst: boolean;
+  markFirst: boolean;
+};
 
 export function formatNumber(num: number) {
   return Math.min(999, Math.floor(num)).toString().padStart(3, '0');
