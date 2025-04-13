@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./demos/*", "./src/*"]
+      "@/*": ["./demos/*", "./src/*", "./src/components/*"]
     },
 
     "useDefineForClassFields": true,

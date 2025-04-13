@@ -6,8 +6,10 @@ function r(path: string) {
 }
 
 export const alias: Record<string, string> = {
+  '@/ui': r('./src/components/ui'),
   '@/shared': r('./demos/shared'),
   '@/2048': r('./demos/2048'),
   '@/minesweeper': r('./demos/minesweeper'),
   '@/n-queens': r('./demos/n-queens'),
+  '@/sliding-puzzle': r('./demos/sliding-puzzle'),
 };
