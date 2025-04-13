@@ -8,6 +8,7 @@
     "lib": ["esnext", "dom", "dom.iterable"],
     "target": "esnext",
     "module": "esnext",
+    "moduleDetection": "force",
 
     "allowJs": true,
     "allowImportingTsExtensions": true,
