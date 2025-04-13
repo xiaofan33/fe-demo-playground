@@ -90,7 +90,7 @@ function onClickSharedUrl() {
 
 function tryResumeGame(dataStr?: string) {
   try {
-    dataStr = dataStr ?? localStorage.getItem(prevGameStorageKey);
+    dataStr = dataStr ?? localStorage.getItem(prevGameStorageKey) ?? '';
     if (dataStr) {
       model.load(JSON.parse(dataStr));
       settings.value = { ...settings.value, ...board.value };
