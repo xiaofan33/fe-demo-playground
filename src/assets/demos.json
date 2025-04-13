@@ -1,0 +1,22 @@
+[
+  {
+    "name": "2048",
+    "path": "/2048",
+    "description": "经典的2048数字合成游戏"
+  },
+  {
+    "name": "扫雷",
+    "path": "/minesweeper",
+    "description": "经典的扫雷游戏"
+  },
+  {
+    "name": "N皇后",
+    "path": "/n-queens",
+    "description": "N皇后问题的摆法展示"
+  },
+  {
+    "name": "滑动拼图",
+    "path": "/sliding-puzzle",
+    "description": "经典的滑动拼图游戏，又名《数字华容道》"
+  }
+]
