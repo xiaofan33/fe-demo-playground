@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, watchEffect } from 'vue';
-import { useTimestamp } from '@vueuse/core';
+import { useTimestamp, useLocalStorage } from '@vueuse/core';
+import { usePagehideCallback } from '@/shared/composable';
 import { difficultyOptions, emojiPresets, numberColors } from '../config.json';
 import {
   formatColorCssVars,
@@ -9,10 +10,20 @@ import {
   type SettingOptions,
 } from '../utils';
 import { useMinesweeperModel } from './use';
+import Dialog from './dialog.vue';
 import Board from './board.vue';
 import type { CellProps, OperationType } from '../model';
 
-const settings = ref<SettingOptions>({
+const prevGameStorageKey = 'g-minesweeper-prev-game';
+const settingsStorageKey = 'g-minesweeper-settings';
+
+const showResumeDialog = ref(false);
+const sharedUrl = ref('');
+const difficulty = ref('easy');
+const timer = ref(0);
+
+const stamp = useTimestamp();
+const settings = useLocalStorage<SettingOptions>(settingsStorageKey, {
   w: 9,
   h: 9,
   m: 10,
@@ -21,27 +32,15 @@ const settings = ref<SettingOptions>({
   openFirst: true,
   markFirst: false,
 });
-
-const lastGameStorageKey = 'g-minesweeper-last-game';
-const showResumeDialog = ref(false);
-
-const sharedUrl = ref('');
-const difficulty = ref('easy');
-const timer = ref(0);
-
 const { board, state, flagNum, ...model } = useMinesweeperModel();
-const stamp = useTimestamp();
+gameReady();
 
-watch(
-  difficulty,
-  value => {
-    if (value !== 'custom') {
-      const { w, h, m } = difficultyOptions.find(({ key }) => key === value)!;
-      gameReady({ w, h, m });
-    }
-  },
-  { immediate: true },
-);
+watch(difficulty, value => {
+  if (value !== 'custom') {
+    const { w, h, m } = difficultyOptions.find(({ key }) => key === value)!;
+    gameReady({ w, h, m });
+  }
+});
 
 watchEffect(() => {
   if (state.value === 'ready') {
@@ -58,8 +57,17 @@ onMounted(() => {
   const hash = window.location.hash.slice(1);
   if (hash) {
     tryResumeGame(atob(hash));
-  } else if (window.localStorage.getItem(lastGameStorageKey)) {
+  } else if (window.localStorage.getItem(prevGameStorageKey)) {
     showResumeDialog.value = true;
+  }
+});
+
+usePagehideCallback(() => {
+  if (state.value === 'playing') {
+    window.localStorage.setItem(
+      prevGameStorageKey,
+      JSON.stringify(model.dump()),
+    );
   }
 });
 
@@ -79,31 +87,38 @@ function onShareCurrentGame() {
 }
 
 function onClickSharedUrl() {
-  setTimeout(() => {
-    sharedUrl.value = '';
-  }, 1000);
+  setTimeout(() => (sharedUrl.value = ''), 500);
 }
 
 function tryResumeGame(dataStr?: string) {
   try {
-    dataStr = dataStr ?? localStorage.getItem(lastGameStorageKey) ?? '';
-    model.load(JSON.parse(dataStr));
+    dataStr = dataStr ?? localStorage.getItem(prevGameStorageKey) ?? '';
+    if (dataStr) {
+      model.load(JSON.parse(dataStr));
+      settings.value = { ...settings.value, ...board.value };
+    }
   } catch (e) {
     gameReady();
   } finally {
-    showResumeDialog.value = false;
+    cleanResumeDialog();
   }
 }
 
-function onConfirmResume() {
+function cleanResumeDialog() {
   showResumeDialog.value = false;
-  window.localStorage.removeItem(lastGameStorageKey);
+  window.localStorage.removeItem(prevGameStorageKey);
 }
 </script>
 
 <template>
-  <div class="text-center select-none">
-    <div class="inline-flex max-w-full flex-col gap-5">
+  <div class="flex justify-center select-none">
+    <Dialog
+      v-if="showResumeDialog"
+      @onConfirm="tryResumeGame()"
+      @onCancel="cleanResumeDialog"
+    ></Dialog>
+
+    <div v-else class="inline-flex max-w-full flex-col gap-5 text-center">
       <div class="flex items-center">
         <button
           v-for="{ key, text } in difficultyOptions"
