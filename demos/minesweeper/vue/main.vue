@@ -2,7 +2,12 @@
 import { onMounted, ref, watch, watchEffect } from 'vue';
 import { useTimestamp, useLocalStorage } from '@vueuse/core';
 import { usePagehideCallback } from '@/shared/composable';
-import { difficultyOptions, emojiPresets, numberColors } from '../config.json';
+import {
+  difficultyOptions,
+  defaultSettings,
+  emojiPresets,
+  numberColors,
+} from '../config.json';
 import {
   formatColorCssVars,
   formatNumber,
@@ -22,16 +27,11 @@ const sharedUrl = ref('');
 const difficulty = ref('easy');
 const timer = ref(0);
 
+const settings = useLocalStorage<SettingOptions>(
+  settingsStorageKey,
+  defaultSettings,
+);
 const stamp = useTimestamp();
-const settings = useLocalStorage<SettingOptions>(settingsStorageKey, {
-  w: 9,
-  h: 9,
-  m: 10,
-  side: 34,
-  edge: 2,
-  openFirst: true,
-  markFirst: false,
-});
 const { board, state, flagNum, ...model } = useMinesweeperModel();
 gameReady();
 
@@ -64,10 +64,8 @@ onMounted(() => {
 
 usePagehideCallback(() => {
   if (state.value === 'playing') {
-    window.localStorage.setItem(
-      prevGameStorageKey,
-      JSON.stringify(model.dump()),
-    );
+    const data = model.dump();
+    window.localStorage.setItem(prevGameStorageKey, JSON.stringify(data));
   }
 });
 
@@ -92,7 +90,7 @@ function onClickSharedUrl() {
 
 function tryResumeGame(dataStr?: string) {
   try {
-    dataStr = dataStr ?? localStorage.getItem(prevGameStorageKey) ?? '';
+    dataStr = dataStr ?? localStorage.getItem(prevGameStorageKey);
     if (dataStr) {
       model.load(JSON.parse(dataStr));
       settings.value = { ...settings.value, ...board.value };
@@ -116,8 +114,7 @@ function cleanResumeDialog() {
       v-if="showResumeDialog"
       @onConfirm="tryResumeGame()"
       @onCancel="cleanResumeDialog"
-    ></Dialog>
-
+    />
     <div v-else class="inline-flex max-w-full flex-col gap-5 text-center">
       <div class="flex items-center">
         <button

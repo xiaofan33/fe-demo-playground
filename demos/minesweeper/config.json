@@ -5,6 +5,15 @@
     { "key": "hard", "text": "高级", "w": 30, "h": 16, "m": 99 },
     { "key": "custom", "text": "自定义", "w": 9, "h": 9, "m": 10 }
   ],
+  "defaultSettings": {
+    "w": 9,
+    "h": 9,
+    "m": 10,
+    "side": 34,
+    "edge": 2,
+    "openFirst": true,
+    "markFirst": false
+  },
   "emojiPresets": {
     "ready": "🙂",
     "playing": "🤔",
