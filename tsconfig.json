@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./demos/*", "./src/*", "./src/components/*"]
+      "@/*": ["./src/*", "./src/components/*", "./demos/*"]
     },
 
     "useDefineForClassFields": true,
@@ -12,6 +12,7 @@
 
     "allowJs": true,
     "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "noEmit": true,

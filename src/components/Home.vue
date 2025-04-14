@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Demos from '../assets/demos.json';
+import DemoList from '../assets/demo-list.json';
 </script>
 
 <template>
@@ -7,13 +7,13 @@ import Demos from '../assets/demos.json';
     <h1 class="mb-8 text-3xl font-bold">Front-end Demo Playground</h1>
     <div class="grid gap-4 sm:grid-cols-2">
       <router-link
-        v-for="demo in Demos"
-        :key="demo.path"
-        :to="demo.path"
+        v-for="{ path, name, description } in DemoList"
+        :key="path"
+        :to="path"
         class="rounded-lg border p-6 transition-colors hover:border-gray-400"
       >
-        <h2 class="mb-2 text-xl font-semibold">{{ demo.name }}</h2>
-        <p class="text-gray-600">{{ demo.description }}</p>
+        <h2 class="mb-2 text-xl font-semibold">{{ name }}</h2>
+        <p class="text-gray-600">{{ description }}</p>
       </router-link>
     </div>
   </main>

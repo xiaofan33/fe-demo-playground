@@ -93,14 +93,14 @@ export class G2048Model {
   }
 
   back() {
-    if (this.prevState) {
+    if (this.canBack()) {
       this.options.score = this.prevState.score;
       this.options.steps--;
       this.tiles = JSON.parse(this.prevState.tiles);
-      this.prevState = null;
       this.gg = false;
       this.updateCells();
     }
+    this.prevState = null;
   }
 
   popup(n: number) {
@@ -123,7 +123,7 @@ export class G2048Model {
     this.gg = maximum === n && !this.canMove();
   }
 
-  canBack() {
+  canBack(): this is { prevState: { score: number; tiles: string } } {
     return !!this.prevState;
   }
 
