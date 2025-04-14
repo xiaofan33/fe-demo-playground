@@ -168,15 +168,4 @@ function updateScoreLabelWithAnimation(to: number, from?: number) {
   </div>
 </template>
 
-<style>
-@import '../styles.css';
-
-.gg-enter-from {
-  opacity: 0;
-  transform: scale(0.85);
-}
-
-.gg-enter-active {
-  transition: all 0.5s ease 1s;
-}
-</style>
+<style src="../styles.css"></style>

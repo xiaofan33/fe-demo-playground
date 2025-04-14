@@ -127,7 +127,7 @@ export class MinesweeperModel {
       return;
     }
     const isHandled =
-      action === 'mark' || cell.mark
+      action === 'mark' || !!cell.mark
         ? this.handleMark(cell)
         : this.handleOpen(cell);
     if (!isHandled && allowOpenAround) {
@@ -229,7 +229,7 @@ export class MinesweeperModel {
     }
   }
 
-  private doGameOver(isWin: boolean) {
+  private doGameOver(isWin?: boolean) {
     if (!isWin) {
       this.state = 'lost';
       this.minesIndexArr.forEach(index => (this.cells[index].open = true));
