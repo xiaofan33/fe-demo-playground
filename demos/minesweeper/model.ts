@@ -1,4 +1,4 @@
-import { arrayShuffle } from '@/shared/utils';
+import { arrayShuffle } from '@/lib/utils';
 
 export interface Position {
   x: number;

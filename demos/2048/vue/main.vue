@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue';
+import { useThrottleFn } from '@vueuse/core';
+import { useMoveCommandCallback, type MoveCommand } from '@/lib/composable';
 import { useG2048 } from './use';
 import Tile from './tile.vue';
 
@@ -17,10 +19,18 @@ const cells = computed(() =>
   ).flat(),
 );
 
-const { gg, tiles, options, bestScore, ...model } = useG2048(boardRef);
+const { gg, tiles, options, bestScore, ...model } = useG2048();
+
+const isFirstMove = ref(true);
+const onMoved = useThrottleFn((cmd: MoveCommand) => {
+  isFirstMove.value = false;
+  model.move(cmd);
+}, 100);
+useMoveCommandCallback({ element: boardRef, onMoved });
 
 function newGame() {
   model.init({ options: { boardWidth: boardWidth.value } });
+  isFirstMove.value = true;
 }
 
 const score = ref(options.value.score);
@@ -130,7 +140,7 @@ function updateScoreLabelWithAnimation(to: number, from?: number) {
             }"
             class="absolute h-[var(--side)] w-[var(--side)] transition-transform"
           >
-            <Tile :score="value" />
+            <Tile :score="value" :isFirstMove="isFirstMove" />
           </div>
         </div>
         <Transition name="gg">

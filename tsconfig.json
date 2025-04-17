@@ -1,25 +1,23 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*", "./src/components/*", "./demos/*"]
+      "@/*": ["./src/*", "./demos/*"]
     },
 
-    "useDefineForClassFields": true,
+    "noEmit": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "target": "esnext",
     "module": "esnext",
+    "moduleResolution": "bundler",
     "moduleDetection": "force",
 
     "allowJs": true,
-    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
-    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "noEmit": true,
 
     "strict": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
-  },
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
 }

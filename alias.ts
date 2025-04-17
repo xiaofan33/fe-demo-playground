@@ -1,15 +1,18 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'pathe';
+import fg from 'fast-glob';
 
-function r(path: string) {
-  return resolve(fileURLToPath(new URL('.', import.meta.url)), path);
-}
+const root = fileURLToPath(new URL('.', import.meta.url));
+
+export const r = (path: string) => resolve(root, path);
 
 export const alias: Record<string, string> = {
-  '@/ui': r('./src/components/ui'),
-  '@/shared': r('./demos/shared'),
-  '@/2048': r('./demos/2048'),
-  '@/minesweeper': r('./demos/minesweeper'),
-  '@/n-queens': r('./demos/n-queens'),
-  '@/sliding-puzzle': r('./demos/sliding-puzzle'),
+  ...syncSubDirAlias('./demos'),
+  ...syncSubDirAlias('src'),
 };
+
+function syncSubDirAlias(dir: string) {
+  return fg
+    .sync(`${dir}/*`, { cwd: root, onlyDirectories: true })
+    .reduce((acc, p) => ({ ...acc, [p.replace(dir, '@')]: r(p) }), {});
+}

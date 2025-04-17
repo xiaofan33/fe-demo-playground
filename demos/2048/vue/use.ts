@@ -1,27 +1,19 @@
-import { reactive, toRefs, watchEffect, type MaybeRef } from 'vue';
-import { useStorage, useThrottleFn } from '@vueuse/core';
-import {
-  useMoveCommandCallback,
-  usePagehideCallback,
-} from '@/shared/composable';
+import { reactive, toRefs, watchEffect } from 'vue';
+import { useStorage } from '@vueuse/core';
+import { usePagehideCallback } from '@/lib/composable';
 import { G2048Model } from '../model';
 
 export interface UseG2048Options {
   saveWhenExit?: boolean;
   lastStateKey?: string;
   bestScoreKey?: string;
-  moveThrottle?: number;
 }
 
-export function useG2048(
-  boardRef: MaybeRef<HTMLElement | null | undefined>,
-  args: UseG2048Options = {},
-) {
+export function useG2048(args: UseG2048Options = {}) {
   const {
     saveWhenExit = true,
     lastStateKey = '2048-last-state',
     bestScoreKey = '2048-best-score',
-    moveThrottle = 100 /**ms */,
   } = args;
 
   const model = reactive(new G2048Model());
@@ -33,9 +25,6 @@ export function useG2048(
       bestScore.value = options.value.score;
     }
   });
-
-  const onMoved = useThrottleFn(model.move.bind(model), moveThrottle, true);
-  useMoveCommandCallback({ element: boardRef, onMoved });
 
   if (saveWhenExit) {
     usePagehideCallback(() => {

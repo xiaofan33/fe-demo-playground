@@ -1,4 +1,4 @@
-import { getRandomInt } from '@/shared/utils';
+import { getRandomInt } from '@/lib/utils';
 
 export interface Position {
   x: number;

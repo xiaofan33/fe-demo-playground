@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-const { score } = defineProps<{ score: number }>();
+const { score, isFirstMove } = defineProps<{
+  score: number;
+  isFirstMove?: boolean;
+}>();
 
-// first render
-const animateCls = ref('tile-popup-no-delay');
+const animateCls = ref(!isFirstMove ? 'tile-popup' : 'tile-popup-no-delay');
 watch(
   () => score,
-  (_, oldScore) => (animateCls.value = !oldScore ? 'tile-popup' : 'tile-merge'),
+  () => (animateCls.value = 'tile-merge'),
 );
 </script>
 

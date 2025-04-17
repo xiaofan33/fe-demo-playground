@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, watchEffect } from 'vue';
 import { useTimestamp, useLocalStorage } from '@vueuse/core';
-import { usePagehideCallback } from '@/shared/composable';
+import { usePagehideCallback } from '@/lib/composable';
 import {
   difficultyOptions,
   defaultSettings,

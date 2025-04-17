@@ -1,4 +1,4 @@
-import { arrayShuffle } from '@/shared/utils';
+import { arrayShuffle } from '@/lib/utils';
 
 export interface TileProps {
   id?: number;
@@ -15,9 +15,9 @@ export interface ModelOptions {
   steps: number;
 }
 
-export type MoveDirection = 'up' | 'down' | 'left' | 'right';
-
-export type MoveConfigs = {
+type PrevGameState = { score: number; tiles: string };
+type MoveDirection = 'up' | 'down' | 'left' | 'right';
+type MoveConfigs = {
   prop: 'x' | 'y';
   reverse: boolean;
   getTiles: (i: number) => Array<TileProps | null>;
@@ -36,8 +36,8 @@ export class G2048Model {
   gg = false;
   options: ModelOptions = { ...G2048Model.defaultOptions };
   tiles: TileProps[] = [];
-  cells: Array<TileProps | null>[] = [];
-  prevState: { score: number; tiles: string } | null = null;
+  cells: (TileProps | null)[][] = [];
+  prevState: PrevGameState | null = null;
   moveConfigMap: Record<MoveDirection, MoveConfigs> = {
     up: {
       prop: 'y',
@@ -123,7 +123,7 @@ export class G2048Model {
     this.gg = maximum === n && !this.canMove();
   }
 
-  canBack(): this is { prevState: { score: number; tiles: string } } {
+  canBack(): this is { prevState: PrevGameState } {
     return !!this.prevState;
   }
 
